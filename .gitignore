@@ -1,0 +1,11 @@
+# --- Archivos de VS Code ---
+.vscode/
+
+# --- Seguridad y Variables de Entorno ---
+.env
+.env.local
+
+# --- Basura del Sistema Operativo ---
+.DS_Store
+Thumbs.db
+*.log

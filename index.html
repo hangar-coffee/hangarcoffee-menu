@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hangar Coffee - Menú Digital</title>
+
+    <!-- 1. CONEXIÓN AL CSS DE TU FONDO DINÁMICO -->
+    <link rel="stylesheet" href="fondos.css">
+
+    <!-- Tailwind CDN y Configuración de colores y fuentes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+          theme: {
+            extend: {
+              colors: {
+                cafe: {
+                  principal: 'transparent',  /* Transparente para ver la lava */
+                  tarjeta: 'transparent',        
+                  acento: '#bc964a',         /* Dorado elegante para precios */
+                  texto: '#2d016d',          /* Color morado/azul oscuro de tu configuración */
+                  mutado: '#7c6a5c',         
+                  bgPromo: 'transparent'    
+                }
+              },
+              fontFamily: {
+                sans: ['Montserrat', 'sans-serif'],
+                /* Ahora 'font-titulo' usa tu fuente Chauncy Fatty local */
+                titulo: ['Chauncy Fatty', 'serif'], 
+              }
+            }
+          }
+        }
+    </script>
+
+    <!-- Fuentes de Iconos y fuente secundaria (Montserrat) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Lector de Google Sheets -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+
+    <style>
+        html { scroll-behavior: smooth; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scroll-width: none; }
+
+        /* RUTA DE LA FUENTE LOCAL (Debe coincidir con la estructura de tu carpeta) */
+        @font-face {
+            font-family: 'Chauncy Fatty';
+            src: url('fuentes/Chauncy Fatty Fatty.ttf') format('truetype');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap; /* Ayuda a que el texto se muestre más rápido mientras carga la fuente */
+        }
+
+        /* SOLUCIÓN AL GLITCH GRÁFICO EN EL HEADER */
+        #main-header {
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            transform-style: preserve-3d;
+        }
+        #top-info-block, #top-info-block * {
+            transform: translateZ(0);
+            -webkit-transform: translateZ(0);
+        }
+    </style>
+</head>
+<body class="bg-cafe-principal text-cafe-texto min-h-screen flex flex-col antialiased font-sans">
+
+    <!-- Encabezado Inteligente -->
+    <header id="main-header" class="bg-white backdrop-blur-md fixed top-0 left-0 w-full z-50 shadow-sm border-b border-stone-200/80 transition-transform duration-300 ease-out will-change-transform">
+        
+        <!-- Bloque de información (Logos) -->
+        <div id="top-info-block" class="bg-transparent px-2 pt-4 pb-2 max-w-4xl mx-auto w-full text-cafe-acento">
+            <!-- Contenedor de Logos - Optimizado para Móvil (Fila forzada) -->
+            <div class="flex flex-row gap-4 justify-center items-center w-full px-1 border-b border-stone-200/60 pb-4">
+                
+                <!-- Logo hangar coffee -->
+                <a href="https://hangarcoffee.com.mx/" target="_blank" class="inline-block hover:scale-110 transition-transform duration-200 active:scale-105">
+                     <img src="assets/hangar_coffee_logo_animacion.gif" alt="Animación Hangar Coffee" class="w-32 h-auto object-contain mx-auto">
+                </a>
+                
+                <!-- Logo 50 mundos -->
+                <a href="https://hangarcoffee.com.mx/pages/50-mundos-voyage" target="_blank" class="inline-block hover:scale-110 transition-transform duration-200 active:scale-105">
+                     <img src="assets/50_mundos_logo_animacion.gif" alt="Animación 50 Mundos" class="w-36 h-auto object-contain mx-auto">
+                </a>
+            </div>
+        </div>
+
+        <!-- Barra de Categorías Dinámica -->
+        <!-- Se añade "font-titulo" para que use Chauncy Fatty -->
+        <div id="categories-nav" class="font-titulo max-w-4xl mx-auto flex gap-6 md:gap-8 overflow-x-auto py-3 px-4 no-scrollbar justify-start md:justify-center items-center bg-transparent select-none"></div>
+    </header>
+
+    <div id="header-spacer" class="w-full transition-all duration-300"></div>
+
+    <!-- Estado de Carga -->
+    <div id="loading-state" class="flex-1 flex flex-col items-center justify-center py-20">
+        <div class="animate-spin rounded-full h-9 w-9 border-b-2 border-cafe-texto mb-3"></div>
+        <p class="text-cafe-texto text-xs font-medium">Aterizando, abrochen sus cintures...</p>
+    </div>
+
+    <!-- Contenedor de Promociones -->
+    <div id="promos-container" class="max-w-4xl mx-auto px-4 pt-6 pb-4 w-full hidden">
+        <!-- El título usa la clase 'font-titulo' para cargar Chauncy Fatty -->
+        <h2 class="font-titulo text-3xl md:text-4xl text-cafe-texto text-center mb-6 font-bold tracking-tight">Promociones Especiales</h2>
+        <div id="promos-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4"></div>
+    </div>
+
+    <!-- Contenedor Principal de Alimentos y Bebidas -->
+    <main id="menu-container" class="max-w-4xl text-cafe-texto mx-auto px-4 py-4 w-full flex-1 hidden"></main>
+
+    <!-- Pie de página -->
+    <footer class="w-full bg-white py-8 text-center text-xs text-cafe-texto border-t border-stone-200 mt-auto flex flex-col items-center gap-5 relative z-10">
+        
+        <!-- Contenedor del eslogan en el Footer -->
+        <div class="transform -rotate-[3deg] flex items-center justify-center gap-1 select-none will-change-transform">
+            <h1 class="font-sans font-black text-xl md:text-2xl uppercase tracking-normal text-cafe-texto drop-shadow-sm">
+                Café que te hace despegar
+            </h1>
+            <i class="fa-solid fa-plane text-[#A33B26] text-xl md:text-2xl transform rotate-[15deg] ml-1 animate-pulse"></i>
+        </div>
+
+        <!-- Redes Sociales Arcoíris (FontAwesome con degradado) -->
+        <div class="flex gap-6 items-center justify-center mt-2">
+            <a href="https://www.facebook.com/HangarCoffee" target="_blank" rel="noopener noreferrer" class="hover:scale-125 transition-transform duration-300 active:scale-95" aria-label="Facebook">
+                <i class="fa-brands fa-facebook text-4xl bg-gradient-to-r from-[#FF4B4B] via-[#FFC83B] to-[#D500F9] text-transparent bg-clip-text inline-block"></i>
+            </a>
+            <a href="https://www.instagram.com/hangarcoffee__" target="_blank" rel="noopener noreferrer" class="hover:scale-125 transition-transform duration-300 active:scale-95" aria-label="Instagram">
+                <i class="fa-brands fa-instagram text-4xl bg-gradient-to-r from-[#FF4B4B] via-[#00E676] to-[#00B0FF] text-transparent bg-clip-text inline-block"></i>
+            </a>
+        </div>
+
+        <p class="font-medium text-stone-500 mt-2">© Hangar Coffee. Todos los derechos reservados.</p>
+    </footer>
+
+    <!-- Botón Flotante de WhatsApp -->
+    <a href="https://wa.me/5513716637" target="_blank" class="fixed bottom-6 right-6 w-14 h-14 bg-[#25D366] text-white rounded-full flex items-center justify-center shadow-xl z-50 hover:scale-110 transition-transform duration-300" title="Pedir por WhatsApp">
+        <i class="fa-brands fa-whatsapp text-3xl"></i>
+    </a>
+
+    <!-- 2. CONEXIÓN AL SCRIPT DE TU FONDO DINÁMICO -->
+    <script src="fondo.js"></script>
+
+    <!-- Lógica del Menú e Integración con Google Sheets -->
+    <script>
+    const SHEET_ID = '1k2tuvopbt6tAuPyn9gmmsRmjZ_izuC_vd9AbN61u9qk';
+    const GID = '0';
+    const CSV_URL = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${GID}`;
+
+    let isHeaderCollapsed = false;
+    let isProgrammaticScrolling = false;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        fetchMenuData();
+        initSmartHeader();
+    });
+
+    function initSmartHeader() {
+        let lastScrollY = window.scrollY;
+        const mainHeader = document.getElementById('main-header');
+        const topInfoBlock = document.getElementById('top-info-block');
+        const spacer = document.getElementById('header-spacer');
+
+        function ajustarEspaciador() { spacer.style.height = mainHeader.offsetHeight + 'px'; }
+        setTimeout(ajustarEspaciador, 400);
+        window.addEventListener('resize', ajustarEspaciador);
+
+        window.addEventListener('scroll', () => {
+            if (isProgrammaticScrolling) return;
+            const currentScrollY = window.scrollY;
+            const delta = currentScrollY - lastScrollY;
+            const infoHeight = topInfoBlock.offsetHeight;
+
+            if (Math.abs(delta) < 10 || currentScrollY < 0) return;
+
+            if (delta > 0 && currentScrollY > infoHeight) {
+                if (!isHeaderCollapsed) {
+                    mainHeader.style.transform = `translateY(-${infoHeight}px)`;
+                    isHeaderCollapsed = true;
+                }
+            } else if (delta < 0) {
+                if (isHeaderCollapsed) {
+                    mainHeader.style.transform = 'translateY(0)';
+                    isHeaderCollapsed = false;
+                }
+            }
+            lastScrollY = currentScrollY;
+        }, { passive: true });
+    }
+
+    function fetchMenuData() {
+        Papa.parse(CSV_URL, {
+            download: true,
+            header: true,
+            skipEmptyLines: true,
+            complete: results => procesarYRenderizar(results.data),
+            error: (err) => {
+                console.error("Error detectado en PapaParse:", err);
+                mostrarErrorHTML();
+            }
+        });
+    }
+
+    function limpiarClave(key) { return key.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim(); }
+
+    function procesarYRenderizar(filas) {
+        if (!filas || filas.length === 0) return;
+        const menuAgrupado = {};
+        const listaPromos = [];
+
+        filas.forEach(row => {
+            const f = {};
+            for (let key in row) f[limpiarClave(key)] = row[key] ? row[key].toString().trim() : '';
+            if (f.estado.toLowerCase() !== 'activo' || !f.nombre) return;
+
+            if (f.categoria.toLowerCase().includes('promo')) {
+                listaPromos.push({ nombre: f.nombre, descripcion: f.descripcion, precio: f.precio });
+                return;
+            }
+
+            if (!menuAgrupado[f.categoria]) menuAgrupado[f.categoria] = {};
+            if (!menuAgrupado[f.categoria][f.nombre]) {
+                menuAgrupado[f.categoria][f.nombre] = { nombre: f.nombre, descripcion: f.descripcion, imagen: f.imagen, variaciones: [] };
+            }
+            menuAgrupado[f.categoria][f.nombre].variaciones.push({ tamano: f.tamano, variante: f.variantes || f.variante, precio: f.precio });
+        });
+        construirInterfaz(listaPromos, menuAgrupado);
+    }
+
+    function construirInterfaz(promos, menuAgrupado) {
+        const navContainer = document.getElementById('categories-nav');
+        const menuContainer = document.getElementById('menu-container');
+        const promosContainer = document.getElementById('promos-container');
+        const promosGrid = document.getElementById('promos-grid');
+        const loadingState = document.getElementById('loading-state');
+
+        navContainer.innerHTML = ''; menuContainer.innerHTML = ''; promosGrid.innerHTML = '';
+
+        if (promos.length > 0) {
+            promosContainer.classList.remove('hidden');
+            promos.forEach(p => {
+                const card = document.createElement('div');
+                card.className = "bg-white/20 backdrop-blur-md border border-transparent rounded-2xl p-5 flex flex-col justify-between shadow-sm relative overflow-hidden transition-all duration-300 min-h-[130px] font-sans";
+                card.innerHTML = `
+                    <div class="absolute top-0 left-0 bg-[#A33B26] text-white font-bold text-[9px] tracking-widest px-3 py-1 rounded-br-xl uppercase">PROMO</div>
+                    <div class="mt-3 flex-1 min-w-0">
+                        <h3 class="font-bold text-base md:text-lg text-cafe-texto leading-tight break-words">${p.nombre}</h3>
+                        ${p.descripcion ? `<p class="text-xs text-cafe-texto mt-1 leading-relaxed italic break-words">${p.descripcion}</p>` : ''}
+                    </div>
+                    <div class="flex justify-end items-center mt-3 flex-shrink-0">
+                        <span class="text-cafe-texto font-bold text-base md:text-lg bg-transparent px-3 py-0.5 rounded-lg border border-stone-200/30 shadow-sm">${formatearPrecio(p.precio)}</span>
+                    </div>
+                `;
+                promosGrid.appendChild(card);
+            });
+        }
+
+        const categories = Object.keys(menuAgrupado);
+        if (promos.length > 0) categories.unshift('Promociones');
+
+        // Paleta de colores Arcoíris para la barra de navegación
+        const rainbowColors = ['#FF4B4B', '#FF8F3d', '#FFC83B', '#00E676', '#00B0FF', '#D500F9'];
+
+        categories.forEach((categoria, index) => {
+            const catId = `seccion-${index}`;
+            const btn = document.createElement('button');
+            const colorCategoria = rainbowColors[index % rainbowColors.length]; // Cicla los colores
+            
+            // Botón con tamaño de fuente grande para lucir Chauncy Fatty
+            btn.className = `text-2xl md:text-3xl whitespace-nowrap hover:scale-110 transition-all duration-200 active:scale-95 px-2`;
+            btn.style.color = colorCategoria; 
+            btn.innerText = categoria;
+
+            if (index !== 0) btn.style.opacity = '0.6';
+
+            btn.onclick = () => {
+                document.querySelectorAll('#categories-nav button').forEach(b => { 
+                    b.style.opacity = '0.6';
+                    b.style.transform = 'scale(1)';
+                });
+                btn.style.opacity = '1';
+                btn.style.transform = 'scale(1.1)';
+
+                isProgrammaticScrolling = true;
+
+                const target = (categoria === 'Promociones') ? promosContainer : document.getElementById(catId);
+                const mainHeader = document.getElementById('main-header');
+                const topInfoBlock = document.getElementById('top-info-block');
+                const visibleHeaderHeight = mainHeader.offsetHeight - (isHeaderCollapsed ? topInfoBlock.offsetHeight : 0);
+                const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - visibleHeaderHeight - 15;
+
+                window.scrollTo({ top: targetPosition, behavior: "smooth" });
+                setTimeout(() => { isProgrammaticScrolling = false; }, 800);
+            };
+            navContainer.appendChild(btn);
+
+            if (categoria !== 'Promociones') {
+                const seccion = document.createElement('section');
+                seccion.id = catId; seccion.className = "mb-10 pt-4";
+                const listaProductos = Object.values(menuAgrupado[categoria]);
+
+                // Los h2 (títulos de sección) también usarán font-titulo (Chauncy Fatty)
+                seccion.innerHTML = `
+                    <h2 class="font-titulo text-3xl md:text-4xl text-cafe-texto border-b border-stone-300/50 pb-2 mb-4 tracking-wide uppercase font-bold">${categoria}</h2>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        ${listaProductos.map(item => {
+                            const tieneImagen = item.imagen && item.imagen.trim().startsWith('http');
+                            let preciosHTML = '';
+
+                            if (item.variaciones.length === 1 && !item.variaciones[0].tamano && !item.variaciones[0].variante) {
+                                preciosHTML = `<span class="text-cafe-texto font-bold text-base whitespace-nowrap pt-0.5">${formatearPrecio(item.variaciones[0].precio)}</span>`;
+                            } else {
+                                preciosHTML = `
+                                    <div class="flex flex-col gap-2 text-right items-end flex-shrink-0 max-w-[55%]">
+                                        ${item.variaciones.map(v => {
+                                            let etiqueta = v.tamano && v.variante ? `${v.tamano} / ${v.variante}` : (v.tamano || v.variante || '');
+                                            return `
+                                                <div class="flex items-start gap-2 justify-end w-full">
+                                                    ${etiqueta ? `<span class="text-[10px] bg-transparent text-cafe-texto px-2 py-0.5 rounded border border-stone-200/30 font-medium">${etiqueta}</span>` : ''}
+                                                    <span class="text-cafe-texto font-bold text-sm md:text-base whitespace-nowrap">${formatearPrecio(v.precio)}</span>
+                                                </div>
+                                            `;
+                                        }).join('')}
+                                    </div>
+                                `;
+                            }
+
+                            return `
+                                <div class="bg-white/20 backdrop-blur-md border border-transparent rounded-xl p-4 flex gap-4 shadow-sm items-start font-sans">
+                                    ${tieneImagen ? `<div class="w-20 h-20 rounded-lg overflow-hidden flex-shrink-0 bg-transparent self-center"><img src="${item.imagen.trim()}" class="w-full h-full object-cover"></div>` : ''}
+                                    <div class="flex-1 min-w-0 flex justify-between items-start gap-2">
+                                        <div class="flex-1 min-w-0">
+                                            <h3 class="font-semibold text-sm md:text-base text-cafe-texto leading-snug break-words">${item.nombre}</h3>
+                                            ${item.descripcion ? `<p class="text-cafe-texto text-xs leading-relaxed mt-1">${item.descripcion}</p>` : ''}
+                                        </div>
+                                        ${preciosHTML}
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+                menuContainer.appendChild(seccion);
+            }
+        });
+        loadingState.classList.add('hidden'); menuContainer.classList.remove('hidden');
+    }
+
+    function formatearPrecio(precio) {
+        let numero = parseFloat(precio.replace(/[^0-9.-]+/g, ""));
+        if (isNaN(numero)) return precio;
+        return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(numero);
+    }
+
+    function mostrarErrorHTML() {
+        document.getElementById('loading-state').innerHTML = `
+            <div class="text-center p-6 max-w-sm bg-white border border-red-200 rounded-2xl mx-4 shadow-sm relative z-50">
+                <span class="text-3xl">⚠️</span>
+                <h3 class="text-base font-semibold mt-3 text-red-600">Error de Conexión</h3>
+                <p class="text-stone-500 text-xs mt-2">No se pudo obtener el archivo CSV de Google Sheets. Asegúrate de estar corriendo el proyecto mediante Live Server en lugar de abrir el archivo directamente.</p>
+            </div>
+        `;
+    }
+</script>
+</body>
+</html>
